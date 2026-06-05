@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String        @unique
+  password      String
+  createdAt     DateTime      @default(now())
+  savedSearches SavedSearch[]
+  alerts        Alert[]
+}
+
+model Job {
+  id              String        @id @default(cuid())
+  title           String
+  company         String
+  location        String
+  locationType    String        // REMOTE, ONSITE, HYBRID
+  jobType         String        // Full Stack Engineer, Backend Engineer, etc.
+  experienceLevel String        // entry, mid, senior, lead
+  salaryMin       Int
+  salaryMax       Int
+  description     String
+  requirements    String
+  applyUrl        String
+  postedAt        DateTime      @default(now())
+  isActive        Boolean       @default(true)
+  alerts          Alert[]
+}
+
+model SavedSearch {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  filters        String   // JSON string
+  alertEnabled   Boolean  @default(false)
+  alertFrequency String   @default("daily") // immediate, daily, weekly
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alerts         Alert[]
+}
+
+model Alert {
+  id            String      @id @default(cuid())
+  userId        String
+  savedSearchId String
+  jobId         String
+  message       String
+  isRead        Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedSearch   SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  job           Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
