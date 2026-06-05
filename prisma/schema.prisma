@@ -12,20 +12,23 @@ model User {
   id            String        @id @default(cuid())
   name          String?
   email         String        @unique
-  password      String
+  password      String?
+  image         String?
   createdAt     DateTime      @default(now())
   savedSearches SavedSearch[]
   alerts        Alert[]
 }
 
+
 model Job {
   id              String        @id @default(cuid())
+  externalId      String?       @unique
   title           String
   company         String
   location        String
-  locationType    String        // REMOTE, ONSITE, HYBRID
-  jobType         String        // Full Stack Engineer, Backend Engineer, etc.
-  experienceLevel String        // entry, mid, senior, lead
+  locationType    String
+  jobType         String
+  experienceLevel String
   salaryMin       Int
   salaryMax       Int
   description     String

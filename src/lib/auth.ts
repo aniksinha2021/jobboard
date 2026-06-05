@@ -1,14 +1,17 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
-  secret: 'jobboard-secret-key-dev',
-  session: {
-    strategy: 'jwt',
-  },
+  secret: process.env.NEXTAUTH_SECRET || 'jobboard-secret-key-dev',
+  session: { strategy: 'jwt' },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -16,39 +19,40 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) {
-          return null;
-        }
+        if (!user || !user.password) return null;
 
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        const passwordMatch = await bcrypt.compare(credentials.password, user.password);
+        if (!passwordMatch) return null;
 
-        if (!passwordMatch) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
+        return { id: user.id, email: user.email, name: user.name, image: user.image };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        await prisma.user.upsert({
+          where: { email: user.email! },
+          update: { name: user.name, image: user.image },
+          create: { email: user.email!, name: user.name, image: user.image },
+        });
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id;
+        const dbUser = await prisma.user.findUnique({ where: { email: user.email! } });
+        if (dbUser) token.id = dbUser.id;
+      }
+      if (account?.provider === 'google' && !token.id) {
+        const dbUser = await prisma.user.findUnique({ where: { email: token.email! } });
+        if (dbUser) token.id = dbUser.id;
       }
       return token;
     },
@@ -59,7 +63,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  pages: {
-    signIn: '/auth/login',
-  },
+  pages: { signIn: '/auth/login' },
 };
