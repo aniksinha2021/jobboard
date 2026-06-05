@@ -72,7 +72,17 @@ async function getJobs(searchParams: PageProps['searchParams']) {
 }
 
 export default async function HomePage({ searchParams }: PageProps) {
-  const { jobs, total, page, pageSize, totalPages } = await getJobs(searchParams);
+  const hasFilters =
+    !!searchParams.search ||
+    !!searchParams.jobType ||
+    !!searchParams.locationType ||
+    !!searchParams.experienceLevel ||
+    !!searchParams.salaryMin ||
+    !!searchParams.salaryMax;
+
+  const { jobs, total, page, pageSize, totalPages } = hasFilters
+    ? await getJobs(searchParams)
+    : { jobs: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
 
   const currentFilters = {
     search: searchParams.search,
@@ -95,14 +105,6 @@ export default async function HomePage({ searchParams }: PageProps) {
     salaryMax: searchParams.salaryMax ? parseInt(searchParams.salaryMax) : undefined,
   };
 
-  const hasFilters =
-    !!currentFilters.search ||
-    currentFilters.jobType.length > 0 ||
-    currentFilters.locationType.length > 0 ||
-    currentFilters.experienceLevel.length > 0 ||
-    !!currentFilters.salaryMin ||
-    !!currentFilters.salaryMax;
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero */}
@@ -111,7 +113,9 @@ export default async function HomePage({ searchParams }: PageProps) {
           Find Your Next Opportunity
         </h1>
         <p className="text-lg text-gray-600">
-          Browse {total}+ jobs across engineering, design, product, and more
+          {hasFilters && total > 0
+            ? `${total} job${total === 1 ? '' : 's'} found`
+            : 'Search across engineering, design, product, and more'}
         </p>
       </div>
 
@@ -146,7 +150,15 @@ export default async function HomePage({ searchParams }: PageProps) {
             )}
           </div>
 
-          {jobs.length === 0 ? (
+          {!hasFilters ? (
+            <div className="bg-white rounded-xl border border-gray-100 p-16 text-center">
+              <svg className="w-14 h-14 text-blue-200 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Search for jobs to get started</h3>
+              <p className="text-gray-500 text-sm">Type a keyword above or pick filters on the left to browse openings</p>
+            </div>
+          ) : jobs.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
               <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
