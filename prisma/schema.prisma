@@ -51,6 +51,12 @@ model SavedSearch {
   alerts         Alert[]
 }
 
+model SearchCache {
+  id        String   @id @default(cuid())
+  query     String   @unique
+  fetchedAt DateTime @default(now())
+}
+
 model Alert {
   id            String      @id @default(cuid())
   userId        String
